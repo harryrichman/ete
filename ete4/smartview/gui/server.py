@@ -1615,4 +1615,4 @@ if __name__ == '__main__':
 #   gunicorn server:app
 
 # To do so, uncomment the following line
-app = run_smartview(safe_mode=True, run=False)
+app = run_smartview(safe_mode=False, run=False)

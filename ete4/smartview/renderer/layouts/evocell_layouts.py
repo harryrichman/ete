@@ -2,7 +2,7 @@ from ..faces import RectFace, TextFace
 from ..treelayout import TreeLayout
 from collections import  OrderedDict
 
-__all__ = [ "LayoutHumanOGs", "LayoutUCSC", "LayoutUCSCtrans", "LayoutSciName", "LayoutColorClade"]
+__all__ = [ "LayoutHumanOGs", "LayoutUCSC", "LayoutUCSCtrans", "LayoutSciName", "LayoutColorClade", "LayoutEvolEvents"]
 
 sciName2color = {}
 taxid2color = {}
@@ -149,6 +149,39 @@ class LayoutColorClade(TreeLayout):
             node.add_face(TextFace(sci_name, color = color, padding_x=2),
                 column=0, position="branch_right")
 
+class LayoutEvolEvents(TreeLayout):
+    def __init__(self, name="Evolutionary events", 
+            prop="evoltype",
+            speciation_color="blue", 
+            duplication_color="red",
+            legend=True):
+        super().__init__(name)
+        
+        self.prop = prop
+        self.speciation_color = speciation_color
+        self.duplication_color = duplication_color
+        self.legend = legend
+
+        self.active = True
+
+    def set_tree_style(self, tree, tree_style):
+        super().set_tree_style(tree, tree_style)
+        if self.legend:
+            colormap = { "Speciation event": self.speciation_color,
+                         "Duplication event": self.duplication_color }
+            tree_style.add_legend(title=self.name, 
+                    variable="discrete",
+                    colormap=colormap)
+
+    def set_node_style(self, node):
+        if not node.is_leaf():
+            if node.props.get(self.prop, "") == "S":
+                node.sm_style["fgcolor"] = self.speciation_color
+                node.sm_style["size"] = 2
+
+            elif node.props.get(self.prop, "") == "D":
+                node.sm_style["fgcolor"] = self.duplication_color
+                node.sm_style["size"] = 2
 
 def summary(nodes):
     "Return a list of names summarizing the given list of nodes"
