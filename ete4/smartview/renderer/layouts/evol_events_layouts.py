@@ -6,7 +6,7 @@ __all__ = [ "LayoutEvolEvents" ]
 
 class LayoutEvolEvents(TreeLayout):
     def __init__(self, name="Evolutionary events", 
-            prop="evol_event",
+            prop="evoltype",
             speciation_color="blue", 
             duplication_color="red",
             legend=True):
