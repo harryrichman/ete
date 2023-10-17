@@ -1444,51 +1444,86 @@ class TreeNode(object):
 
         return new_node
 
-    def _asciiArt(self, char1='-', show_internal=True, compact=False, attributes=None):
+    def _asciiArt(
+        self, char1='-', show_internal=True, compact=False, attributes=None,
+        rect_style=False
+    ):
         """
         Returns the ASCII representation of the tree.
 
         Code based on the PyCogent GPL project.
         """
-        if not attributes:
+        if attributes is None:
             attributes = ["name"]
-        node_name = ', '.join(map(str, [getattr(self, v) for v in attributes if hasattr(self, v)]))
 
-        LEN = max(3, len(node_name) if not self.children or show_internal else 3)
-        PAD = ' ' * LEN
-        PA = ' ' * (LEN-1)
-        if not self.is_leaf():
-            mids = []
-            result = []
-            for c in self.children:
-                if len(self.children) == 1:
-                    char2 = '/'
-                elif c is self.children[0]:
-                    char2 = '/'
-                elif c is self.children[-1]:
-                    char2 = '\\'
+        node_start_chars = {}
+        node_start_chars[self] = char1
+        for node in self.traverse(strategy="preorder"):
+            for i, c in enumerate(node.children):
+                if i == 0:
+                    c_char = "/"
+                elif i == len(node.children) - 1:
+                    c_char = "\\"
                 else:
-                    char2 = '-'
-                (clines, mid) = c._asciiArt(char2, show_internal, compact, attributes)
-                mids.append(mid+len(result))
-                result.extend(clines)
-                if not compact:
-                    result.append('')
-            if not compact:
-                result.pop()
-            (lo, hi, end) = (mids[0], mids[-1], len(result))
-            prefixes = [PAD] * (lo+1) + [PA+'|'] * (hi-lo-1) + [PAD] * (end-hi)
-            mid = int((lo + hi) / 2)
-            prefixes[mid] = char1 + '-'*(LEN-2) + prefixes[mid][-1]
-            result = [p+l for (p,l) in zip(prefixes, result)]
-            if show_internal:
-                stem = result[mid]
-                result[mid] = stem[0] + node_name + stem[len(node_name)+1:]
-            return (result, mid)
-        else:
-            return ([char1 + '-' + node_name], 0)
+                    c_char = "-"
+                if rect_style: 
+                    c_char = "-"
+                node_start_chars[c] = c_char
 
-    def get_ascii(self, show_internal=True, compact=False, attributes=None):
+        node_names = {}
+        node_mids = {}
+        node_results = {}
+        for node in self.traverse(strategy="postorder"):
+            node_name = ', '.join(
+                map(
+                    str, 
+                    [getattr(node, v) for v in attributes if hasattr(node, v)]
+                )
+            )
+            node_names[node] = node_name
+            LEN = max(
+                3, len(node_name) if not node.children or show_internal else 3
+            )
+            PAD = ' ' * LEN
+            PA = ' ' * (LEN - 1)
+            c_char = node_start_chars[node]
+
+            if node.is_leaf():
+                node_ascii = [c_char + "-" + node_name]
+                node_results[node] = node_ascii
+                node_mids[node] = 0
+
+            else: # node is not a leaf
+                mids = []
+                result = []
+                children = node.children
+                for c in children:
+                    c_mid = node_mids[c]
+                    mids.append(c_mid + len(result))
+                    c_lines = node_results[c]
+                    result.extend(c_lines)
+                    if not compact:
+                        result.append("")
+                if not compact:
+                    result.pop()  # Remove the last empty line
+                (lo, hi, end) = (mids[0], mids[-1], len(result))
+                prefixes = (
+                    [PAD] * (lo + 1) + [PA + "|"] * (hi - lo - 1) + [PAD] * (end - hi)
+                )
+                mid = (lo + hi) // 2
+                prefixes[mid] = c_char + "-" * (LEN - 2) + prefixes[mid][-1]
+                result = [p + r for (p, r) in zip(prefixes, result)]
+
+                if show_internal:
+                    stem = result[mid]
+                    result[mid] = stem[0] + node_name + stem[len(node_name) + 1:]
+                
+                node_results[node] = result
+                node_mids[node] = mid
+
+        return node_results[self], node_mids[self]
+
+    def get_ascii(self, show_internal=True, compact=False, attributes=None, rect_style=False):
         """
         Returns a string containing an ascii drawing of the tree.
 
@@ -1499,8 +1534,12 @@ class TreeNode(object):
             ASCII representation.
 
         """
-        (lines, mid) = self._asciiArt(show_internal=show_internal,
-                                      compact=compact, attributes=attributes)
+        (lines, _) = self._asciiArt(
+            show_internal=show_internal,
+            compact=compact, 
+            attributes=attributes,
+            rect_style=rect_style
+        )
         return '\n'+'\n'.join(lines)
 
 
